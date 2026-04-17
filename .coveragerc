@@ -1,0 +1,15 @@
+[run]
+source =
+    .
+omit =
+    main.py
+    tests/*
+    .venv/*
+
+[report]
+omit =
+    main.py
+    tests/*
+    .venv/*
+show_missing = True
+skip_empty = True

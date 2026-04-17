@@ -3,5 +3,8 @@ __pycache__/
 *.pyc
 ants.code-workspace
 .vscode/
-.mypy_cahce/
-
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml

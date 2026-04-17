@@ -2,12 +2,22 @@
 setlocal
 
 echo Running mypy...
-.venv\Scripts\python.exe -m mypy sim\config.py sim\world.py sim\render.py main.py tests/test_world.py tests/test_render.py
+.venv\Scripts\python.exe -m mypy sim\config.py sim\world.py sim\render.py sim\ant.py sim\sim.py main.py tests/test_world.py tests/test_render.py tests/test_ant.py tests/test_sim.py
 if errorlevel 1 goto :error
 
 echo.
-echo Running unit tests...
-.venv\Scripts\python.exe -m unittest discover -s tests
+echo Running unit tests with coverage...
+.venv\Scripts\python.exe -m coverage run -m unittest discover -s tests
+if errorlevel 1 goto :error
+
+echo.
+echo Coverage summary...
+.venv\Scripts\python.exe -m coverage report -m
+if errorlevel 1 goto :error
+
+echo.
+echo Writing HTML coverage report...
+.venv\Scripts\python.exe -m coverage html
 if errorlevel 1 goto :error
 
 echo.
