@@ -42,6 +42,9 @@ class Ant:
             self.x += dx
             self.y += dy
             self.direction = chosen_direction
+        else:
+            # Turn around when fully blocked so the ant can leave the edge next tick.
+            self.direction = (self.direction + 4) % len(DIRECTION_OFFSETS)
 
         # A blocked ant still spends the tick attempting to move.
         self.energy -= MOVE_COST

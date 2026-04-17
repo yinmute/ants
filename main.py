@@ -3,24 +3,30 @@ from __future__ import annotations
 import pygame
 
 from sim.config import FPS, WINDOW_TITLE
-from sim.render import Renderer
+from sim.render import OverlayState, Renderer
 from sim.sim import Simulation
 
 
-def print_metrics(simulation: Simulation) -> None:
-    """Print a small sanity snapshot so movement can be checked without ant rendering."""
-    living_ants = [ant for ant in simulation.ants if ant.alive]
-    average_energy = 0.0
-    if living_ants:
-        average_energy = sum(ant.energy for ant in living_ants) / len(living_ants)
+def draw_frame(
+    screen: pygame.Surface,
+    renderer: Renderer,
+    simulation: Simulation,
+    paused: bool,
+) -> None:
+    """Draw the current world, ants, and small status overlay."""
+    living_ants = sum(1 for ant in simulation.ants if ant.alive)
 
-    sample_positions = [(ant.x, ant.y) for ant in simulation.ants[:5]]
-    print(
-        f"tick={simulation.tick} "
-        f"living_ants={len(living_ants)} "
-        f"average_energy={average_energy:.2f} "
-        f"sample_positions={sample_positions}"
+    renderer.draw(screen)
+    renderer.draw_ants(screen, simulation.ants)
+    renderer.draw_overlay(
+        screen,
+        OverlayState(
+            tick=simulation.tick,
+            living_ants=living_ants,
+            paused=paused,
+        ),
     )
+    pygame.display.flip()
 
 
 def main() -> None:
@@ -35,6 +41,7 @@ def main() -> None:
     screen = pygame.display.set_mode((renderer.width, renderer.height))
     pygame.display.set_caption(WINDOW_TITLE)
     clock = pygame.time.Clock()
+    paused = False
 
     running = True
     while running:
@@ -45,6 +52,8 @@ def main() -> None:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+                elif event.key == pygame.K_SPACE:
+                    paused = not paused
                 elif event.key == pygame.K_r:
                     reset_requested = True
 
@@ -54,17 +63,14 @@ def main() -> None:
         if reset_requested:
             simulation = Simulation()
             renderer.set_world(simulation.world)
-            renderer.draw(screen)
-            pygame.display.flip()
+            draw_frame(screen, renderer, simulation, paused)
             clock.tick(FPS)
             continue
 
-        simulation.step()
-        if simulation.tick % 30 == 0:
-            print_metrics(simulation)
+        if not paused:
+            simulation.step()
 
-        renderer.draw(screen)
-        pygame.display.flip()
+        draw_frame(screen, renderer, simulation, paused)
         clock.tick(FPS)
 
     pygame.quit()

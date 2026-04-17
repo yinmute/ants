@@ -33,16 +33,27 @@ class AntTests(unittest.TestCase):
         self.assertEqual(ant.energy, MAX_ENERGY - MOVE_COST)
         self.assertTrue(ant.alive)
 
-    def test_step_stays_in_place_when_all_choices_are_out_of_bounds(self) -> None:
-        """A blocked ant should stay put but still spend the tick trying to move."""
+    def test_step_turns_around_when_all_choices_are_out_of_bounds(self) -> None:
+        """A blocked ant should stay put, reverse direction, and spend the tick."""
         ant = Ant(x=0, y=0, direction=7)
         rng = random.Random(123)
 
         ant.step(width=1, height=1, rng=rng)
 
         self.assertEqual((ant.x, ant.y), (0, 0))
-        self.assertEqual(ant.direction, 7)
+        self.assertEqual(ant.direction, 3)
         self.assertEqual(ant.energy, MAX_ENERGY - MOVE_COST)
+
+    def test_blocked_ant_can_move_away_from_edge_on_next_step(self) -> None:
+        """Reversing in place should let a wall-facing ant leave the border next tick."""
+        ant = Ant(x=0, y=0, direction=7)
+        rng = random.Random(123)
+
+        ant.step(width=2, height=2, rng=rng)
+        ant.step(width=2, height=2, rng=rng)
+
+        self.assertNotEqual((ant.x, ant.y), (0, 0))
+        self.assertIn((ant.x, ant.y), {(1, 0), (1, 1), (0, 1)})
 
     def test_step_marks_ant_dead_when_energy_reaches_zero(self) -> None:
         """An ant should become dead as soon as its post-step energy is depleted."""
