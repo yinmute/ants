@@ -38,6 +38,7 @@ def main() -> None:
 
     running = True
     while running:
+        reset_requested = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -45,8 +46,18 @@ def main() -> None:
                 if event.key == pygame.K_ESCAPE:
                     running = False
                 elif event.key == pygame.K_r:
-                    simulation = Simulation()
-                    renderer.set_world(simulation.world)
+                    reset_requested = True
+
+        if not running:
+            break
+
+        if reset_requested:
+            simulation = Simulation()
+            renderer.set_world(simulation.world)
+            renderer.draw(screen)
+            pygame.display.flip()
+            clock.tick(FPS)
+            continue
 
         simulation.step()
         if simulation.tick % 30 == 0:
