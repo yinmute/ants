@@ -52,6 +52,17 @@ class World:
         """Sum all food units currently stored in the grid."""
         return int(self.food_amount.sum())
 
+    def consume_food(self, x: int, y: int) -> bool:
+        """Remove one food unit from a cell and clear it when depleted."""
+        if self.food_amount[y, x] <= 0:
+            return False
+
+        self.food_amount[y, x] -= 1
+        if self.food_amount[y, x] == 0:
+            self.cell_type[y, x] = EMPTY
+
+        return True
+
     def _place_nest(self) -> None:
         """Mark the centered 3x3 nest area in the cell type grid."""
         start_x = self.width // 2 - NEST_SIZE // 2

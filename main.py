@@ -14,15 +14,16 @@ def draw_frame(
     paused: bool,
 ) -> None:
     """Draw the current world, ants, and small status overlay."""
-    living_ants = sum(1 for ant in simulation.ants if ant.alive)
-
     renderer.draw(screen)
     renderer.draw_ants(screen, simulation.ants)
     renderer.draw_overlay(
         screen,
         OverlayState(
             tick=simulation.tick,
-            living_ants=living_ants,
+            living_ants=simulation.living_ants,
+            delivered_food=simulation.delivered_food,
+            ants_carrying_food=simulation.ants_carrying_food,
+            remaining_total_food=simulation.remaining_total_food,
             paused=paused,
         ),
     )

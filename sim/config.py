@@ -11,7 +11,7 @@ FOOD_PER_PATCH = 80
 
 # Ant settings used by Ant and Simulation when spawning and updating ants.
 ANT_COUNT = 30
-MAX_ENERGY = 200
+MAX_ENERGY = 300
 MOVE_COST = 1
 
 # App loop settings used by main.py when creating the window and ticking pygame.

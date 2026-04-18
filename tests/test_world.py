@@ -1,7 +1,7 @@
 import unittest
 
 from sim.config import FOOD_PATCH_COUNT, FOOD_PER_PATCH, GRID_HEIGHT, GRID_WIDTH, NEST_SIZE
-from sim.world import FOOD, NEST, World
+from sim.world import EMPTY, FOOD, NEST, World
 
 
 class WorldTests(unittest.TestCase):
@@ -48,6 +48,22 @@ class WorldTests(unittest.TestCase):
 
         self.assertTrue((world.cell_type == original_cell_type).all())
         self.assertTrue((world.food_amount == original_food_amount).all())
+
+    def test_consume_food_reduces_amount_and_clears_empty_cells(self) -> None:
+        """Consuming the final food unit should remove the food cell from the world."""
+        world = World(seed=123)
+        food_y, food_x = next(zip(*((world.cell_type == FOOD).nonzero())))
+        starting_food = int(world.food_amount[food_y, food_x])
+
+        for _ in range(starting_food - 1):
+            self.assertTrue(world.consume_food(food_x, food_y))
+
+        self.assertEqual(int(world.food_amount[food_y, food_x]), 1)
+        self.assertEqual(int(world.cell_type[food_y, food_x]), FOOD)
+
+        self.assertTrue(world.consume_food(food_x, food_y))
+        self.assertEqual(int(world.food_amount[food_y, food_x]), 0)
+        self.assertEqual(int(world.cell_type[food_y, food_x]), EMPTY)
 
 
 if __name__ == "__main__":

@@ -39,6 +39,9 @@ class OverlayState:
 
     tick: int
     living_ants: int
+    delivered_food: int
+    ants_carrying_food: int
+    remaining_total_food: int
     paused: bool
 
 
@@ -102,6 +105,9 @@ class Renderer:
         lines = [
             f"Tick: {overlay.tick}",
             f"Living ants: {overlay.living_ants}",
+            f"Delivered food: {overlay.delivered_food}",
+            f"Carrying food: {overlay.ants_carrying_food}",
+            f"Remaining food: {overlay.remaining_total_food}",
             f"State: {status}",
         ]
         line_surfaces = [self.font.render(line, True, COLOR_OVERLAY_TEXT) for line in lines]

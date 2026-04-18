@@ -104,6 +104,9 @@ class RendererTests(unittest.TestCase):
             OverlayState(
                 tick=12,
                 living_ants=7,
+                delivered_food=2,
+                ants_carrying_food=3,
+                remaining_total_food=120,
                 paused=True,
             ),
         )
