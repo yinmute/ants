@@ -15,6 +15,7 @@ class AntTests(unittest.TestCase):
         self.assertEqual(ant.direction, 2)
         self.assertEqual(ant.energy, MAX_ENERGY)
         self.assertFalse(ant.carrying_food)
+        self.assertEqual(ant.wander_steps, 0)
         self.assertTrue(ant.alive)
 
     def test_step_moves_to_a_valid_forward_choice_and_spends_energy(self) -> None:
@@ -54,6 +55,16 @@ class AntTests(unittest.TestCase):
 
         self.assertNotEqual((ant.x, ant.y), (0, 0))
         self.assertIn((ant.x, ant.y), {(1, 0), (1, 1), (0, 1)})
+
+    def test_step_uses_preferred_direction_when_valid(self) -> None:
+        """A preferred valid direction should override the random forward choice."""
+        ant = Ant(x=5, y=5, direction=2)
+        rng = random.Random(123)
+
+        ant.step(width=64, height=64, rng=rng, preferred_direction=3)
+
+        self.assertEqual((ant.x, ant.y), (6, 6))
+        self.assertEqual(ant.direction, 3)
 
     def test_step_marks_ant_dead_when_energy_reaches_zero(self) -> None:
         """An ant should become dead as soon as its post-step energy is depleted."""

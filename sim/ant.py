@@ -29,6 +29,7 @@ class Ant:
     direction: int
     energy: int = MAX_ENERGY
     carrying_food: bool = False
+    wander_steps: int = 0
     alive: bool = True
 
     def reverse_direction(self) -> None:
@@ -40,7 +41,7 @@ class Ant:
         width: int,
         height: int,
         rng: random.Random,
-        forced_direction: int | None = None,
+        preferred_direction: int | None = None,
     ) -> None:
         """Move using the local forward choices and spend one unit of energy."""
         if not self.alive:
@@ -50,7 +51,7 @@ class Ant:
             width=width,
             height=height,
             rng=rng,
-            forced_direction=forced_direction,
+            preferred_direction=preferred_direction,
         )
         if chosen_direction is not None:
             dx, dy = DIRECTION_OFFSETS[chosen_direction]
@@ -74,16 +75,21 @@ class Ant:
             (self.direction + 1) % len(DIRECTION_OFFSETS),
         ]
 
+    def position_in_direction(self, direction: int, distance: int = 1) -> Coordinate:
+        """Return the grid position reached by moving in one direction for a distance."""
+        dx, dy = DIRECTION_OFFSETS[direction]
+        return self.x + dx * distance, self.y + dy * distance
+
     def _choose_direction(
         self,
         width: int,
         height: int,
         rng: random.Random,
-        forced_direction: int | None = None,
+        preferred_direction: int | None = None,
     ) -> int | None:
         """Pick a valid direction from forward-left, forward, and forward-right."""
-        if forced_direction is not None and self._is_valid_direction(forced_direction, width=width, height=height):
-            return forced_direction
+        if preferred_direction is not None and self._is_valid_direction(preferred_direction, width=width, height=height):
+            return preferred_direction
 
         directions = self.candidate_directions()
         rng.shuffle(directions)
@@ -96,7 +102,5 @@ class Ant:
 
     def _is_valid_direction(self, direction: int, width: int, height: int) -> bool:
         """Return whether a one-step move in this direction stays inside the grid."""
-        dx, dy = DIRECTION_OFFSETS[direction]
-        new_x = self.x + dx
-        new_y = self.y + dy
+        new_x, new_y = self.position_in_direction(direction)
         return 0 <= new_x < width and 0 <= new_y < height

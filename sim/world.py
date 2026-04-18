@@ -6,7 +6,19 @@ from typing import Optional
 import numpy as np
 import numpy.typing as npt
 
-from sim.config import FOOD_PATCH_COUNT, FOOD_PER_PATCH, GRID_HEIGHT, GRID_WIDTH, NEST_SIZE
+from sim.config import (
+    DEPOSIT_FOOD,
+    DEPOSIT_HOME,
+    FOOD_PATCH_COUNT,
+    FOOD_PER_PATCH,
+    FOOD_PHEROMONE_DECAY,
+    GRID_HEIGHT,
+    GRID_WIDTH,
+    HOME_PHEROMONE_DECAY,
+    NEST_SIZE,
+    PHEROMONE_MAX,
+    PHEROMONE_MIN_CLAMP,
+)
 
 EMPTY = 0
 NEST = 1
@@ -51,6 +63,22 @@ class World:
     def total_food(self) -> int:
         """Sum all food units currently stored in the grid."""
         return int(self.food_amount.sum())
+
+    def evaporate_pheromones(self) -> None:
+        """Decay both pheromone layers and clear out tiny residual values."""
+        self.home_pheromone *= HOME_PHEROMONE_DECAY
+        self.food_pheromone *= FOOD_PHEROMONE_DECAY
+
+        self.home_pheromone[self.home_pheromone < PHEROMONE_MIN_CLAMP] = 0.0
+        self.food_pheromone[self.food_pheromone < PHEROMONE_MIN_CLAMP] = 0.0
+
+    def deposit_home_pheromone(self, x: int, y: int, amount: float = DEPOSIT_HOME) -> None:
+        """Add home pheromone to the given cell."""
+        self.home_pheromone[y, x] = min(PHEROMONE_MAX, self.home_pheromone[y, x] + amount)
+
+    def deposit_food_pheromone(self, x: int, y: int) -> None:
+        """Add one unit of food pheromone to the given cell."""
+        self.food_pheromone[y, x] = min(PHEROMONE_MAX, self.food_pheromone[y, x] + DEPOSIT_FOOD)
 
     def consume_food(self, x: int, y: int) -> bool:
         """Remove one food unit from a cell and clear it when depleted."""

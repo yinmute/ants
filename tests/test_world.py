@@ -1,6 +1,15 @@
 import unittest
 
-from sim.config import FOOD_PATCH_COUNT, FOOD_PER_PATCH, GRID_HEIGHT, GRID_WIDTH, NEST_SIZE
+from sim.config import (
+    FOOD_PATCH_COUNT,
+    FOOD_PER_PATCH,
+    FOOD_PHEROMONE_DECAY,
+    GRID_HEIGHT,
+    GRID_WIDTH,
+    HOME_PHEROMONE_DECAY,
+    NEST_SIZE,
+    PHEROMONE_MAX,
+)
 from sim.world import EMPTY, FOOD, NEST, World
 
 
@@ -64,6 +73,35 @@ class WorldTests(unittest.TestCase):
         self.assertTrue(world.consume_food(food_x, food_y))
         self.assertEqual(int(world.food_amount[food_y, food_x]), 0)
         self.assertEqual(int(world.cell_type[food_y, food_x]), EMPTY)
+
+    def test_evaporate_pheromones_decays_and_clamps_small_values(self) -> None:
+        """Pheromone layers should decay each tick and clamp tiny values to zero."""
+        world = World(seed=123)
+
+        world.home_pheromone[1, 1] = 2.0
+        world.food_pheromone[2, 2] = 3.0
+        world.home_pheromone[3, 3] = 0.001
+        world.food_pheromone[4, 4] = 0.0005
+
+        world.evaporate_pheromones()
+
+        self.assertEqual(float(world.home_pheromone[1, 1]), 2.0 * HOME_PHEROMONE_DECAY)
+        self.assertEqual(float(world.food_pheromone[2, 2]), 3.0 * FOOD_PHEROMONE_DECAY)
+        self.assertEqual(float(world.home_pheromone[3, 3]), 0.0)
+        self.assertEqual(float(world.food_pheromone[4, 4]), 0.0)
+
+    def test_deposit_pheromones_cap_at_configured_maximum(self) -> None:
+        """Deposits should saturate at the configured pheromone ceiling."""
+        world = World(seed=123)
+
+        world.home_pheromone[1, 1] = PHEROMONE_MAX - 0.25
+        world.food_pheromone[2, 2] = PHEROMONE_MAX - 0.25
+
+        world.deposit_home_pheromone(1, 1, amount=1.0)
+        world.deposit_food_pheromone(2, 2)
+
+        self.assertEqual(float(world.home_pheromone[1, 1]), PHEROMONE_MAX)
+        self.assertEqual(float(world.food_pheromone[2, 2]), PHEROMONE_MAX)
 
 
 if __name__ == "__main__":

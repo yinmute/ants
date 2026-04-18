@@ -14,6 +14,16 @@ ANT_COUNT = 30
 MAX_ENERGY = 300
 MOVE_COST = 1
 
+# Pheromone settings used by World and Simulation for trail decay and deposit.
+HOME_PHEROMONE_DECAY = 0.95
+FOOD_PHEROMONE_DECAY = 0.95
+DEPOSIT_HOME = 1.0
+DEPOSIT_FOOD = 1.0
+HOME_PHEROMONE_FATIGUE = 0.98
+PHEROMONE_MAX = 5.0
+PHEROMONE_MIN_CLAMP = 0.001
+PHEROMONE_FOLLOW_THRESHOLD = 0.05
+
 # App loop settings used by main.py when creating the window and ticking pygame.
 WINDOW_TITLE = "Swarm Ants v1"
 FPS = 30

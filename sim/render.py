@@ -22,6 +22,8 @@ class WorldView(Protocol):
     width: int
     height: int
     cell_type: npt.NDArray[np.int_]
+    home_pheromone: npt.NDArray[np.float64]
+    food_pheromone: npt.NDArray[np.float64]
 
 
 class AntView(Protocol):
@@ -81,6 +83,12 @@ class Renderer:
                     self.cell_size,
                 )
                 surface.fill(color, rect)
+
+                # Keep pheromones subtle so terrain and ant markers stay readable.
+                red_tint = min(60, int(float(self.world.food_pheromone[y, x]) * 40))
+                blue_tint = min(60, int(float(self.world.home_pheromone[y, x]) * 40))
+                if red_tint or blue_tint:
+                    surface.fill((red_tint, 0, blue_tint), rect, special_flags=pygame.BLEND_RGB_ADD)
 
     def draw_ants(self, surface: pygame.Surface, ants: Sequence[AntView]) -> None:
         """Draw each living ant as a small marker centered inside its cell."""

@@ -15,6 +15,8 @@ class FakeWorld:
         self.width = width
         self.height = height
         self.cell_type: npt.NDArray[np.int_] = np.zeros((height, width), dtype=int)
+        self.home_pheromone: npt.NDArray[np.float64] = np.zeros((height, width), dtype=float)
+        self.food_pheromone: npt.NDArray[np.float64] = np.zeros((height, width), dtype=float)
 
 
 class FakeAnt:
@@ -73,6 +75,22 @@ class RendererTests(unittest.TestCase):
         self.assertEqual(surface.get_at((5, 5))[:3], COLOR_EMPTY)
         self.assertEqual(surface.get_at((15, 5))[:3], COLOR_NEST)
         self.assertEqual(surface.get_at((25, 15))[:3], COLOR_FOOD)
+
+    def test_draw_adds_subtle_pheromone_tint(self) -> None:
+        """Pheromone values should slightly tint cells without replacing base colors."""
+        world = FakeWorld(width=2, height=1)
+        world.home_pheromone[0, 0] = 1.0
+        world.food_pheromone[0, 1] = 1.0
+        renderer = Renderer(world)
+        surface = pygame.Surface((renderer.width, renderer.height))
+
+        renderer.draw(surface)
+
+        _, _, left_blue, _ = surface.get_at((5, 5))
+        right_red, _, _, _ = surface.get_at((15, 5))
+
+        self.assertGreater(left_blue, COLOR_EMPTY[2])
+        self.assertGreater(right_red, COLOR_EMPTY[0])
 
     def test_draw_ants_paints_living_ant_markers(self) -> None:
         """Living ants should be drawn on top of the world with the expected colors."""

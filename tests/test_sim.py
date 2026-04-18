@@ -1,6 +1,14 @@
 import unittest
 
-from sim.config import ANT_COUNT, MAX_ENERGY, MOVE_COST
+from sim.config import (
+    ANT_COUNT,
+    DEPOSIT_FOOD,
+    DEPOSIT_HOME,
+    HOME_PHEROMONE_FATIGUE,
+    MAX_ENERGY,
+    MOVE_COST,
+    PHEROMONE_FOLLOW_THRESHOLD,
+)
 from sim.sim import Simulation
 from sim.world import EMPTY, FOOD, NEST
 
@@ -20,6 +28,7 @@ class SimulationTests(unittest.TestCase):
             self.assertIn((ant.x, ant.y), nest_cells)
             self.assertEqual(ant.energy, MAX_ENERGY)
             self.assertIn(ant.direction, range(8))
+            self.assertEqual(ant.wander_steps, 0)
             self.assertTrue(ant.alive)
 
     def test_step_increments_tick_and_updates_living_ants(self) -> None:
@@ -132,22 +141,276 @@ class SimulationTests(unittest.TestCase):
         self.assertEqual(simulation.living_ants, 1)
         self.assertEqual(simulation.ants_carrying_food, 0)
 
-    def test_find_nest_direction_uses_forward_nest_cell_when_available(self) -> None:
-        """Forward nest cells should be preferred for carrying ants when visible."""
+    def test_choose_direction_for_carrying_ant_uses_seen_nest_cell(self) -> None:
+        """A carrying ant should choose a nest cell in its forward candidate cells."""
         simulation = Simulation(seed=123)
         ant = simulation.ants[0]
 
         ant.x = 10
         ant.y = 10
         ant.direction = 2
+        ant.carrying_food = True
 
         simulation.world.cell_type[:, :] = EMPTY
         simulation.world.cell_type[10, 11] = NEST
-        simulation.world.cell_type[9, 10] = NEST
 
-        chosen_direction = simulation._find_nest_direction(ant)
+        chosen_direction = simulation._choose_direction_for_ant(ant)
 
         self.assertEqual(chosen_direction, 2)
+
+    def test_choose_direction_for_non_carrying_ant_uses_seen_food_cell(self) -> None:
+        """A non-carrying ant should choose the richest seen food cell first."""
+        simulation = Simulation(seed=123)
+        ant = simulation.ants[0]
+
+        ant.x = 10
+        ant.y = 10
+        ant.direction = 2
+        ant.carrying_food = False
+
+        simulation.world.cell_type[:, :] = EMPTY
+        simulation.world.food_amount[:, :] = 0
+        simulation.world.cell_type[9, 11] = FOOD
+        simulation.world.food_amount[9, 11] = 2
+        simulation.world.cell_type[10, 11] = FOOD
+        simulation.world.food_amount[10, 11] = 5
+
+        chosen_direction = simulation._choose_direction_for_ant(ant)
+
+        self.assertEqual(chosen_direction, 2)
+
+    def test_choose_direction_for_non_carrying_ant_sees_food_at_distance_two(self) -> None:
+        """A non-carrying ant should steer toward food seen two cells ahead."""
+        simulation = Simulation(seed=123)
+        ant = simulation.ants[0]
+
+        ant.x = 10
+        ant.y = 10
+        ant.direction = 2
+        ant.carrying_food = False
+
+        simulation.world.cell_type[:, :] = EMPTY
+        simulation.world.food_amount[:, :] = 0
+        simulation.world.cell_type[10, 12] = FOOD
+        simulation.world.food_amount[10, 12] = 4
+
+        chosen_direction = simulation._choose_direction_for_ant(ant)
+
+        self.assertEqual(chosen_direction, 2)
+
+    def test_choose_direction_for_non_carrying_ant_sees_food_at_distance_three(self) -> None:
+        """A non-carrying ant should steer toward food seen three cells ahead."""
+        simulation = Simulation(seed=123)
+        ant = simulation.ants[0]
+
+        ant.x = 10
+        ant.y = 10
+        ant.direction = 2
+        ant.carrying_food = False
+
+        simulation.world.cell_type[:, :] = EMPTY
+        simulation.world.food_amount[:, :] = 0
+        simulation.world.cell_type[10, 13] = FOOD
+        simulation.world.food_amount[10, 13] = 4
+
+        chosen_direction = simulation._choose_direction_for_ant(ant)
+
+        self.assertEqual(chosen_direction, 2)
+
+    def test_choose_direction_for_non_carrying_ant_follows_food_pheromone(self) -> None:
+        """A non-carrying ant should follow the strongest local food pheromone."""
+        simulation = Simulation(seed=123)
+        ant = simulation.ants[0]
+
+        ant.x = 10
+        ant.y = 10
+        ant.direction = 2
+        ant.carrying_food = False
+
+        simulation.world.cell_type[:, :] = EMPTY
+        simulation.world.food_amount[:, :] = 0
+        simulation.world.food_pheromone[:, :] = 0.0
+        simulation.world.food_pheromone[9, 11] = PHEROMONE_FOLLOW_THRESHOLD + 0.01
+        simulation.world.food_pheromone[10, 11] = PHEROMONE_FOLLOW_THRESHOLD + 0.02
+
+        chosen_direction = simulation._choose_direction_for_ant(ant)
+
+        self.assertEqual(chosen_direction, 2)
+
+    def test_choose_direction_for_carrying_ant_follows_home_pheromone(self) -> None:
+        """A carrying ant should follow the strongest local home pheromone."""
+        simulation = Simulation(seed=123)
+        ant = simulation.ants[0]
+
+        ant.x = 10
+        ant.y = 10
+        ant.direction = 2
+        ant.carrying_food = True
+
+        simulation.world.cell_type[:, :] = EMPTY
+        simulation.world.home_pheromone[:, :] = 0.0
+        simulation.world.home_pheromone[11, 11] = PHEROMONE_FOLLOW_THRESHOLD + 0.03
+        simulation.world.home_pheromone[10, 11] = PHEROMONE_FOLLOW_THRESHOLD + 0.01
+
+        chosen_direction = simulation._choose_direction_for_ant(ant)
+
+        self.assertEqual(chosen_direction, 3)
+
+    def test_choose_direction_for_carrying_ant_follows_home_pheromone_at_distance_three(self) -> None:
+        """A carrying ant should see home pheromone farther ahead along its forward cone."""
+        simulation = Simulation(seed=123)
+        ant = simulation.ants[0]
+
+        ant.x = 10
+        ant.y = 10
+        ant.direction = 2
+        ant.carrying_food = True
+
+        simulation.world.cell_type[:, :] = EMPTY
+        simulation.world.home_pheromone[:, :] = 0.0
+        simulation.world.home_pheromone[10, 13] = PHEROMONE_FOLLOW_THRESHOLD + 0.02
+
+        chosen_direction = simulation._choose_direction_for_ant(ant)
+
+        self.assertEqual(chosen_direction, 2)
+
+    def test_choose_direction_for_carrying_ant_prefers_trail_closer_to_nest(self) -> None:
+        """A carrying ant should prefer the home trail that heads more directly nest-ward."""
+        simulation = Simulation(seed=123)
+        ant = simulation.ants[0]
+
+        ant.x = 40
+        ant.y = 40
+        ant.direction = 6
+        ant.carrying_food = True
+
+        simulation.world.cell_type[:, :] = EMPTY
+        simulation.world.home_pheromone[:, :] = 0.0
+        simulation.world.home_pheromone[39, 39] = PHEROMONE_FOLLOW_THRESHOLD + 0.10
+        simulation.world.home_pheromone[41, 39] = PHEROMONE_FOLLOW_THRESHOLD + 0.30
+
+        chosen_direction = simulation._choose_direction_for_ant(ant)
+
+        self.assertEqual(chosen_direction, 7)
+
+    def test_choose_direction_ignores_pheromone_values_at_threshold(self) -> None:
+        """Pheromone values must beat the threshold before they influence movement."""
+        simulation = Simulation(seed=123)
+        ant = simulation.ants[0]
+
+        ant.x = 10
+        ant.y = 10
+        ant.direction = 2
+        ant.carrying_food = False
+
+        simulation.world.cell_type[:, :] = EMPTY
+        simulation.world.food_amount[:, :] = 0
+        simulation.world.food_pheromone[:, :] = 0.0
+        simulation.world.food_pheromone[10, 11] = PHEROMONE_FOLLOW_THRESHOLD
+
+        chosen_direction = simulation._choose_direction_for_ant(ant)
+
+        self.assertIsNone(chosen_direction)
+
+    def test_step_deposits_home_pheromone_for_non_carrying_ant(self) -> None:
+        """A non-carrying ant should leave home pheromone on the cell it reaches."""
+        simulation = Simulation(seed=123)
+        ant = simulation.ants[0]
+
+        ant.x = 0
+        ant.y = 1
+        ant.direction = 7
+        ant.carrying_food = False
+        ant.alive = True
+
+        simulation.world.cell_type[:, :] = EMPTY
+        simulation.world.home_pheromone[:, :] = 0.0
+        simulation.world.food_pheromone[:, :] = 0.0
+
+        for other_ant in simulation.ants[1:]:
+            other_ant.alive = False
+
+        simulation.step()
+
+        self.assertEqual((ant.x, ant.y), (0, 0))
+        self.assertAlmostEqual(
+            float(simulation.world.home_pheromone[0, 0]),
+            DEPOSIT_HOME * HOME_PHEROMONE_FATIGUE,
+        )
+        self.assertEqual(float(simulation.world.food_pheromone[0, 0]), 0.0)
+        self.assertEqual(ant.wander_steps, 1)
+
+    def test_home_pheromone_deposit_gets_weaker_with_more_wandering(self) -> None:
+        """Longer wandering should reduce the amount of home pheromone deposited."""
+        simulation = Simulation(seed=123)
+        ant = simulation.ants[0]
+
+        ant.x = 5
+        ant.y = 5
+        ant.direction = 2
+        ant.carrying_food = False
+        ant.alive = True
+        ant.wander_steps = 9
+
+        simulation.world.cell_type[:, :] = EMPTY
+        simulation.world.home_pheromone[:, :] = 0.0
+        simulation.world.food_pheromone[:, :] = 0.0
+
+        simulation._deposit_pheromone(ant)
+
+        self.assertEqual(ant.wander_steps, 10)
+        self.assertAlmostEqual(
+            float(simulation.world.home_pheromone[5, 5]),
+            DEPOSIT_HOME * (HOME_PHEROMONE_FATIGUE ** 10),
+        )
+
+    def test_picking_up_food_resets_wandering_fatigue(self) -> None:
+        """Picking up food should reset the wandering count used for home deposits."""
+        simulation = Simulation(seed=123)
+        ant = simulation.ants[0]
+
+        ant.x = 5
+        ant.y = 5
+        ant.direction = 2
+        ant.energy = 12
+        ant.carrying_food = False
+        ant.wander_steps = 14
+        ant.alive = True
+
+        simulation.world.cell_type[:, :] = EMPTY
+        simulation.world.food_amount[:, :] = 0
+        simulation.world.cell_type[5, 5] = FOOD
+        simulation.world.food_amount[5, 5] = 1
+
+        simulation._handle_food_interaction(ant)
+
+        self.assertTrue(ant.carrying_food)
+        self.assertEqual(ant.wander_steps, 0)
+
+    def test_step_deposits_food_pheromone_for_carrying_ant(self) -> None:
+        """A carrying ant should leave food pheromone on the cell it reaches."""
+        simulation = Simulation(seed=123)
+        ant = simulation.ants[0]
+
+        ant.x = 0
+        ant.y = 1
+        ant.direction = 7
+        ant.carrying_food = True
+        ant.alive = True
+
+        simulation.world.cell_type[:, :] = EMPTY
+        simulation.world.home_pheromone[:, :] = 0.0
+        simulation.world.food_pheromone[:, :] = 0.0
+
+        for other_ant in simulation.ants[1:]:
+            other_ant.alive = False
+
+        simulation.step()
+
+        self.assertEqual((ant.x, ant.y), (0, 0))
+        self.assertEqual(float(simulation.world.home_pheromone[0, 0]), 0.0)
+        self.assertEqual(float(simulation.world.food_pheromone[0, 0]), DEPOSIT_FOOD)
+        self.assertEqual(ant.wander_steps, 0)
 
     def test_carrying_ant_does_not_pick_up_more_food(self) -> None:
         """An ant already carrying food should leave the food cell unchanged."""
